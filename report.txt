@@ -1,0 +1,23 @@
+#Course name, Letter grade, hours
+
+#Fall 2012
+TD 301 F12, A, 3
+UGS 303 F12, A, 3
+M 408C F12, A, 4
+CS 314 F12, A-, 3
+ENS 107s F12, A, 1
+
+#Spring 2013
+CS 313k S13, B, 3
+CS 429 S13, C+, 4
+M 408D S13, C, 4
+CS 378 S13, A, 3
+ENS 107s S13, A, 1
+
+#Fall 2013
+CS 439 F13, B+, 4
+M 340L F13, A, 3
+CS 105 F13, A, 1
+SSC 321 F13, B-, 3
+GOV 314L F13, B+, 3
+ENS 107s F13, A, 1
