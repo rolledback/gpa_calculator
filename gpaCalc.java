@@ -19,7 +19,7 @@ public class gpaCalc {
    //formatting/file constants
    static final int COL_SIZE = 39;
    static final String CONFIG = "config.txt";
-   static final String GRADES = "report2.txt";
+   static final String GRADES = "report.txt";
 
    public static void main (String args[]) {
       System.out.println("GPA Calc v1.0");
