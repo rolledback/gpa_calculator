@@ -8,7 +8,7 @@ Todo: save new records back to file
 */
 
 public class gpaCalc {
-   static LinkedHashMap<String, Double> scale = new LinkedHashMap<String, Double>();
+   static HashMap<String, Double> scale = new HashMap<String, Double>();
    static LinkedHashMap<String, Course> classes = new LinkedHashMap<String, Course>();
    static ArrayList<Course> newClasses = new ArrayList<Course>();
 
