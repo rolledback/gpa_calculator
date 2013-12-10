@@ -1,5 +1,7 @@
 import java.util.*;
 import java.io.*;
+import java.util.Calendar;
+import java.text.SimpleDateFormat;
 
 /* 
 Todo: save new records back to file
@@ -8,6 +10,7 @@ Todo: save new records back to file
 public class gpaCalc {
    static LinkedHashMap<String, Double> scale = new LinkedHashMap<String, Double>();
    static LinkedHashMap<String, Course> classes = new LinkedHashMap<String, Course>();
+   static LinkedHashMap<String, Course> newClasses = new LinkedHashMap<String, Course>();
 
    static double totalGp;
    static int totalHours;
@@ -20,6 +23,7 @@ public class gpaCalc {
    static final int COL_SIZE = 39;
    static final String CONFIG = "config.txt";
    static final String GRADES = "report.txt";
+   static final String DATE_FORMAT_NOW = "yyyy-MM-dd HH:mm:ss";
 
    public static void main (String args[]) {
       System.out.println("GPA Calc v1.0");
@@ -38,7 +42,7 @@ public class gpaCalc {
       
       //read in data
       readConfig(config);
-      readGrades(grades);
+      readGrades(grades, true);
 
       String input;
       System.out.print("> ");
@@ -61,6 +65,10 @@ public class gpaCalc {
             printCommands();
          else if(input.equals("reload"))
             reload(grades);
+         else if(input.equals("save"))
+            save();
+         else if(input.equals("generate"))
+            generate();
          else
             System.out.println("Invalid command.");
          System.out.print("> ");
@@ -97,15 +105,25 @@ public class gpaCalc {
          System.out.println(key + ": " + value);
       }
    }
+
+   //print out general statistics
+   public static void printStats() {
+      gpa = totalGp / totalHours;      
+      System.out.println("Total hours: " + totalHours);
+      System.out.println("Total classes: " + numClasses);
+      System.out.println("GPA: "+ gpa);
+   }
    
    //add a class, same format as report.txt file
    public static void addClass() {
+      System.out.println("Enter class details:");
       System.out.print(">> ");
-      parseLine(userInput.nextLine().trim());
+      parseLine(userInput.nextLine().trim(), false);
    }
    
    //remove a class by name
    public static void removeClass() {
+      System.out.println("Enter class name:");
       System.out.print(">> ");
       String names = userInput.nextLine().trim();
       String[] keys = names.split(",");
@@ -118,12 +136,13 @@ public class gpaCalc {
             System.out.println("Removed: " + keys[i]);
          }
          else
-            System.out.println(keys[i] + " is not a valid class.");
+            System.out.println("Not a valid class.");
       }
    }
    
    //search for a class by name
    public static void searchClass() {
+      System.out.println("Enter class name:");
       System.out.print(">> ");
       String name = userInput.nextLine().trim();
       if(classes.containsKey(name)) {
@@ -136,12 +155,67 @@ public class gpaCalc {
          System.out.println("Not a valid class.");
    }
    
-   //print out general statistics
-   public static void printStats() {
-      gpa = totalGp / totalHours;      
-      System.out.println("Total hours: " + totalHours);
-      System.out.println("Total classes: " + numClasses);
-      System.out.println("GPA: "+ gpa);
+   //restore classes db to original state and reset all vars
+   public static void reload(File grades) {
+      classes.clear();
+      totalHours = 0;
+      gpa = 0.0;
+      numClasses = 0;
+      totalGp = 0;
+      readGrades(grades, true);
+   }
+
+   //save new classes to the report file
+   public static void save() {
+      if(newClasses.size() > 0) {
+         Iterator i = newClasses.keySet().iterator();
+         try {
+            FileWriter fw = new FileWriter(GRADES, true);
+            Calendar cal = Calendar.getInstance();
+            SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT_NOW);
+            fw.write("\n#" + sdf.format(cal.getTime()) + "\n");
+            while(i.hasNext()) {
+                Course c = newClasses.get(i.next());
+                fw.write(c.name + ", " + c.letterGrade + ", " + Integer.toString(c.hours) + "\n");
+            }
+            fw.close();
+            newClasses.clear();
+         }
+         catch(IOException ioe) {
+             System.err.println("IOException: " + ioe.getMessage());
+         }
+      }
+      else { System.out.println("No changes to be made."); }    
+   }
+
+   //writes all classes to the report file, overwrites old file
+   public static void generate() {
+      System.out.println("Are you sure? y/n");
+      System.out.print(">> ");
+      String answer = userInput.nextLine().trim();
+      while(!answer.equals("y") && !answer.equals("n")) {
+         System.out.println("Invalid response, use y/n.");
+         System.out.print(">> ");         
+         answer = userInput.nextLine().trim();        
+      }
+      if(answer.equals("y")) {
+         Iterator i = classes.keySet().iterator();
+         try {
+            FileWriter fw = new FileWriter(GRADES, false);
+            Calendar cal = Calendar.getInstance();
+            SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT_NOW);
+            fw.write("#" + sdf.format(cal.getTime()) + "\n");
+            while(i.hasNext()) {
+                Course c = classes.get(i.next());
+                fw.write(c.name + ", " + c.letterGrade + ", " + Integer.toString(c.hours) + "\n");
+            }
+            fw.close();
+         }
+         catch(IOException ioe) {
+             System.err.println("IOException: " + ioe.getMessage());
+         }
+      }
+      else { System.out.println("Operation aborted."); }
    }
    
    //print out available commands
@@ -153,19 +227,12 @@ public class gpaCalc {
       System.out.println("<remove> remove a class by name");
       System.out.println("<search> search for a class by name");
       System.out.println("<reload> reload grade report");
+      System.out.println("<save> save new classes to the grade report");
+      System.out.println("<generate> overwrite current report with");
       System.out.println("<help> display all commands");
       System.out.println("<quit> exit program");
    }
    
-   //restore classes db to original state and reset all vars
-   public static void reload(File grades) {
-      classes.clear();
-      totalHours = 0;
-      gpa = 0.0;
-      numClasses = 0;
-      totalGp = 0;
-      readGrades(grades);
-   }
 
    //read in config file (grading scale)
    public static void readConfig(File config) {
@@ -184,7 +251,7 @@ public class gpaCalc {
             }
             catch (Exception e) {
                System.out.println("\nError parsing \"" + line + "\".");
-               System.out.println("Wrong format.\n");
+               System.out.println("Wrong format.");
             }
          }
       }
@@ -195,14 +262,14 @@ public class gpaCalc {
    }
    
    //read in report file (grade report)
-   public static void readGrades(File grades) {
+   public static void readGrades(File grades, boolean initRead) {
       System.out.println("Loading classes from " + grades.toString() + "...");
       try {
          Scanner gradesScanner = new Scanner(grades);
          while(gradesScanner.hasNext()) {
             String line = gradesScanner.nextLine().trim();
             if(!line.isEmpty() && line.charAt(0) != '#') {
-               parseLine(line);
+               parseLine(line, initRead);
             }
          }
       }
@@ -214,13 +281,15 @@ public class gpaCalc {
    }
    
    //parse line of report file
-   public static void parseLine(String line) {
+   public static void parseLine(String line, boolean initRead) {
       String keys[] = line.split(",");
       for(int i = 0; i < keys.length; i++)
          keys[i] = keys[i].trim();
       try {
          int hours = Integer.parseInt(keys[2]);
          double gp = scale.get(keys[1]) * hours;
+         if(!classes.containsKey(keys[0]) && !initRead)
+            newClasses.put(keys[0], new Course(keys[0], keys[1], gp, hours));
          classes.put(keys[0], new Course(keys[0], keys[1], gp, hours));
          totalGp += gp;
          totalHours += hours;
@@ -228,11 +297,11 @@ public class gpaCalc {
       }
       catch (NullPointerException e) {
          System.out.println("Error parsing \"" + line + "\".");
-         System.out.println("No match found for letter grade in scale.\n");
+         System.out.println("No match found for letter grade in scale.");
       }
-      catch (NumberFormatException e) {
+      catch (Exception e) {
          System.out.println("Error parsing \"" + line + "\".");
-         System.out.println("Wrong format.\n");
+         System.out.println("Wrong format.");
       }
    }
 }
