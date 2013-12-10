@@ -10,7 +10,7 @@ Todo: save new records back to file
 public class gpaCalc {
    static LinkedHashMap<String, Double> scale = new LinkedHashMap<String, Double>();
    static LinkedHashMap<String, Course> classes = new LinkedHashMap<String, Course>();
-   static LinkedHashMap<String, Course> newClasses = new LinkedHashMap<String, Course>();
+   static ArrayList<Course> newClasses = new ArrayList<Course>();
 
    static double totalGp;
    static int totalHours;
@@ -168,14 +168,14 @@ public class gpaCalc {
    //save new classes to the report file
    public static void save() {
       if(newClasses.size() > 0) {
-         Iterator i = newClasses.keySet().iterator();
+         Iterator i = newClasses.iterator();
          try {
             FileWriter fw = new FileWriter(GRADES, true);
             Calendar cal = Calendar.getInstance();
             SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT_NOW);
             fw.write("\n#" + sdf.format(cal.getTime()) + "\n");
             while(i.hasNext()) {
-                Course c = newClasses.get(i.next());
+                Course c = (Course)i.next();
                 fw.write(c.name + ", " + c.letterGrade + ", " + Integer.toString(c.hours) + "\n");
             }
             fw.close();
@@ -289,7 +289,7 @@ public class gpaCalc {
          int hours = Integer.parseInt(keys[2]);
          double gp = scale.get(keys[1]) * hours;
          if(!classes.containsKey(keys[0]) && !initRead)
-            newClasses.put(keys[0], new Course(keys[0], keys[1], gp, hours));
+            newClasses.add(new Course(keys[0], keys[1], gp, hours));
          classes.put(keys[0], new Course(keys[0], keys[1], gp, hours));
          totalGp += gp;
          totalHours += hours;
