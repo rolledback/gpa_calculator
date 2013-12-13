@@ -3,20 +3,16 @@ import java.io.*;
 import java.util.Calendar;
 import java.text.SimpleDateFormat;
 
-/* 
-Todo: save new records back to file
-*/
-
 public class gpaCalc {
    static HashMap<String, Double> scale = new HashMap<String, Double>();
    static LinkedHashMap<String, Course> classes = new LinkedHashMap<String, Course>();
-   static ArrayList<Course> newClasses = new ArrayList<Course>();
+   static ArrayList<String> buffer = new ArrayList<String>();
 
    static double totalGp;
    static int totalHours;
    static int numClasses;
    static double gpa;
-   
+
    static Scanner userInput;
       
    //formatting/file constants
@@ -67,8 +63,8 @@ public class gpaCalc {
             reload(grades);
          else if(input.equals("save"))
             save();
-         else if(input.equals("generate"))
-            generate();
+         else if(input.equals("report"))
+            report();
          else
             System.out.println("Invalid command.");
          System.out.print("> ");
@@ -118,7 +114,8 @@ public class gpaCalc {
    public static void addClass() {
       System.out.println("Enter class details:");
       System.out.print(">> ");
-      parseLine(userInput.nextLine().trim(), false);
+      parseLine(userInput.nextLine().trim());
+      numClasses = classes.size();
    }
    
    //remove a class by name
@@ -162,60 +159,44 @@ public class gpaCalc {
       gpa = 0.0;
       numClasses = 0;
       totalGp = 0;
+      buffer.clear();
       readGrades(grades, true);
    }
 
    //save new classes to the report file
    public static void save() {
-      if(newClasses.size() > 0) {
-         Iterator i = newClasses.iterator();
-         try {
-            FileWriter fw = new FileWriter(GRADES, true);
-            Calendar cal = Calendar.getInstance();
-            SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT_NOW);
-            fw.write("\n#" + sdf.format(cal.getTime()) + "\n");
-            while(i.hasNext()) {
-                Course c = (Course)i.next();
-                fw.write(c.name + ", " + c.letterGrade + ", " + Integer.toString(c.hours) + "\n");
+      boolean firstAdd = true;
+      for(Course temp: classes.values()) {
+         String line = temp.name + ", " + temp.letterGrade + ", " + Integer.toString(temp.hours);
+         if(temp.lineNum > -1)             
+            buffer.set(temp.lineNum, line);
+         else {
+            if(firstAdd) {
+               Calendar cal = Calendar.getInstance();
+               SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT_NOW);
+               buffer.add("\n#" + sdf.format(cal.getTime()));
+               firstAdd = false;
             }
-            fw.close();
-            newClasses.clear();
+            buffer.add(line);
+            temp.lineNum = buffer.size() - 1;
          }
-         catch(IOException ioe) {
-             System.err.println("IOException: " + ioe.getMessage());
-         }
+      }    
+      try {
+         FileWriter fw = new FileWriter(GRADES, false);
+         for(String l: buffer)
+            fw.write(l + "\n");
+         fw.close();
       }
-      else { System.out.println("No changes to be made."); }    
+      catch(IOException ioe) {
+          System.err.println("IOException: " + ioe.getMessage());
+      }     
    }
 
    //writes all classes to the report file, overwrites old file
-   public static void generate() {
-      System.out.println("Are you sure? y/n");
-      System.out.print(">> ");
-      String answer = userInput.nextLine().trim();
-      while(!answer.equals("y") && !answer.equals("n")) {
-         System.out.println("Invalid response, use y/n.");
-         System.out.print(">> ");         
-         answer = userInput.nextLine().trim();        
-      }
-      if(answer.equals("y")) {
-         Iterator i = classes.keySet().iterator();
-         try {
-            FileWriter fw = new FileWriter(GRADES, false);
-            Calendar cal = Calendar.getInstance();
-            SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT_NOW);
-            fw.write("#" + sdf.format(cal.getTime()) + "\n");
-            while(i.hasNext()) {
-                Course c = classes.get(i.next());
-                fw.write(c.name + ", " + c.letterGrade + ", " + Integer.toString(c.hours) + "\n");
-            }
-            fw.close();
-         }
-         catch(IOException ioe) {
-             System.err.println("IOException: " + ioe.getMessage());
-         }
-      }
-      else { System.out.println("Operation aborted."); }
+   public static void report() {
+      Iterator i = buffer.iterator();
+      while(i.hasNext())
+         System.out.println(i.next());
    }
    
    //print out available commands
@@ -227,8 +208,8 @@ public class gpaCalc {
       System.out.println("<remove> remove a class by name");
       System.out.println("<search> search for a class by name");
       System.out.println("<reload> reload grade report");
-      System.out.println("<save> save new classes to the grade report");
-      System.out.println("<generate> overwrite current report with");
+      System.out.println("<save> save the database to the grade report");
+      System.out.println("<report> print grade report file");
       System.out.println("<help> display all commands");
       System.out.println("<quit> exit program");
    }
@@ -268,8 +249,9 @@ public class gpaCalc {
          Scanner gradesScanner = new Scanner(grades);
          while(gradesScanner.hasNext()) {
             String line = gradesScanner.nextLine().trim();
+            buffer.add(line);
             if(!line.isEmpty() && line.charAt(0) != '#') {
-               parseLine(line, initRead);
+               parseLine(line);
             }
          }
       }
@@ -277,23 +259,28 @@ public class gpaCalc {
          System.out.println("Could not open grade report file. Exiting.");
          System.exit(-1);
       }
+      numClasses = classes.size();
       System.out.println("Loaded " + numClasses + " classes.");
    }
    
    //parse line of report file
-   public static void parseLine(String line, boolean initRead) {
+   public static void parseLine(String line) {
       String keys[] = line.split(",");
+      int lineNum;
       for(int i = 0; i < keys.length; i++)
          keys[i] = keys[i].trim();
       try {
          int hours = Integer.parseInt(keys[2]);
          double gp = scale.get(keys[1]) * hours;
-         if(!classes.containsKey(keys[0]) && !initRead)
-            newClasses.add(new Course(keys[0], keys[1], gp, hours));
-         classes.put(keys[0], new Course(keys[0], keys[1], gp, hours));
+         if(classes.containsKey(keys[0]))
+            lineNum = classes.get(keys[0]).lineNum;
+         else if(buffer.contains(line))
+            lineNum = buffer.size() - 1;
+         else
+            lineNum = -1;
+         classes.put(keys[0], new Course(keys[0], keys[1], gp, hours, lineNum));
          totalGp += gp;
          totalHours += hours;
-         numClasses++;
       }
       catch (NullPointerException e) {
          System.out.println("Error parsing \"" + line + "\".");
@@ -311,17 +298,19 @@ class Course {
    String letterGrade;
    Double gradePoint;
    int hours;
+   int lineNum;
    
    //formatting constants
    final int MAX_NAME_SIZE = 12;
    final int MAX_LETT_SIZE = 2;
    final int MAX_GNUM_SIZE = 5;
    
-   public Course(String n, String lg, Double gp, int h) {
+   public Course(String n, String lg, Double gp, int h, int l) {
       name = n;
       letterGrade = lg;
       gradePoint = gp;
       hours = h;
+      lineNum = l;
    }
    
    //print out object in table row format
