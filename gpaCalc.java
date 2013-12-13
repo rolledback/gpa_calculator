@@ -4,9 +4,10 @@ import java.util.Calendar;
 import java.text.SimpleDateFormat;
 
 public class gpaCalc {
-   static HashMap<String, Double> scale = new HashMap<String, Double>();
-   static LinkedHashMap<String, Course> classes = new LinkedHashMap<String, Course>();
-   static ArrayList<String> buffer = new ArrayList<String>();
+
+   static HashMap<String, Double> scale;
+   static LinkedHashMap<String, Course> classes;
+   static ArrayList<String> buffer;
 
    static double totalGp;
    static int totalHours;
@@ -30,6 +31,10 @@ public class gpaCalc {
       totalHours = 0;
       numClasses = 0;
       gpa = 0.0;
+
+      scale = new HashMap<String, Double>();
+      classes = new LinkedHashMap<String, Course>();
+      buffer = new ArrayList<String>();
       
       File config = new File(CONFIG);
       File grades = new File(GRADES);
@@ -87,6 +92,7 @@ public class gpaCalc {
       }
    }
    
+   //print row border COL_SIZE long
    public static void printBorder() {
       for(int d = 0; d < COL_SIZE; d++)
          System.out.print("-");
@@ -188,7 +194,7 @@ public class gpaCalc {
          fw.close();
       }
       catch(IOException ioe) {
-          System.err.println("IOException: " + ioe.getMessage());
+          System.err.println("Error saving: " + ioe.getMessage());
       }     
    }
 
