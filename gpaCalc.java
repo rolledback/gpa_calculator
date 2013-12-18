@@ -278,15 +278,20 @@ public class gpaCalc {
       try {
          int hours = Integer.parseInt(keys[2]);
          double gp = scale.get(keys[1]) * hours;
-         if(classes.containsKey(keys[0]))
+         if(classes.containsKey(keys[0])) {
             lineNum = classes.get(keys[0]).lineNum;
-         else if(buffer.contains(line))
+            totalGp -= classes.get(keys[0]).gradePoint;
+         }
+         else if(buffer.contains(line)) {
             lineNum = buffer.size() - 1;
-         else
-            lineNum = -1;
-         classes.put(keys[0], new Course(keys[0], keys[1], gp, hours, lineNum));
+            totalHours += hours;
+         }
+         else {
+            lineNum = -1;     
+            totalHours += hours;
+         }
          totalGp += gp;
-         totalHours += hours;
+         classes.put(keys[0], new Course(keys[0], keys[1], gp, hours, lineNum));
       }
       catch (NullPointerException e) {
          System.out.println("Error parsing \"" + line + "\".");
